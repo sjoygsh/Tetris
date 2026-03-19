@@ -4,19 +4,17 @@
     {
       "name": "default",
       "binaryDir": "${sourceDir}/build",
+      "toolchainFile": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
-      "name": "vcpkg",
-      "inherits": "default",
-      "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-    },
-    {
-      "name": "vcpkg-system",
-      "inherits": "default",
-      "toolchainFile": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      "name": "linux",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ]
 }
