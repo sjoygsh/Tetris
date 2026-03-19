@@ -6,13 +6,10 @@
 #   2. Where to find libraries (SDL2, SDL2_ttf, SDL2_mixer)
 #   3. How to compile our source code into an executable
 #
-# USAGE:
-#   mkdir build && cd build
-#   cmake .. -G "MinGW Makefiles"   (or your preferred generator)
-#   cmake --build .
+# Works on both Windows (vcpkg) and Linux (system packages via pkg-config).
 # ===========================================================================
 
-# Minimum CMake version required (3.15+ has good FindPackage support)
+# Minimum CMake version required
 cmake_minimum_required(VERSION 3.15)
 
 # Name our project "Tetris" and declare it as a C project
@@ -25,18 +22,47 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # ---------------------------------------------------------------------------
 # Find SDL2 and its extension libraries
 # ---------------------------------------------------------------------------
-# CMake will search your system for these libraries.
-# If they are installed via vcpkg, MSYS2, or system package manager,
-# CMake should find them automatically.
+# Strategy: try CMake config files first (works with vcpkg on Windows).
+# If that fails, fall back to pkg-config (standard on Linux).
+# ---------------------------------------------------------------------------
 
-# SDL2 — the core graphics/input/audio library
-find_package(SDL2 REQUIRED)
+# Try to find packages via CMake config (vcpkg provides these)
+find_package(SDL2 QUIET CONFIG)
+find_package(SDL2_ttf QUIET CONFIG)
+find_package(SDL2_mixer QUIET CONFIG)
 
-# SDL2_ttf — for rendering TrueType fonts (text on screen)
-find_package(SDL2_ttf REQUIRED)
+# Check if we got imported targets from CMake config
+if(TARGET SDL2::SDL2 AND TARGET SDL2_ttf::SDL2_ttf AND TARGET SDL2_mixer::SDL2_mixer)
+    # Windows / vcpkg path — imported targets available
+    set(SDL2_LIBS SDL2::SDL2 SDL2::SDL2main SDL2_ttf::SDL2_ttf SDL2_mixer::SDL2_mixer)
+    set(SDL2_INC "")
+    message(STATUS "Found SDL2 via CMake config (vcpkg)")
+else()
+    # Linux path — use pkg-config
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2 REQUIRED sdl2)
+    pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
+    pkg_check_modules(SDL2_MIXER REQUIRED SDL2_mixer)
 
-# SDL2_mixer — for playing sound effects and music
-find_package(SDL2_mixer REQUIRED)
+    set(SDL2_LIBS
+        ${SDL2_LIBRARIES}
+        ${SDL2_TTF_LIBRARIES}
+        ${SDL2_MIXER_LIBRARIES}
+    )
+    set(SDL2_INC
+        ${SDL2_INCLUDE_DIRS}
+        ${SDL2_TTF_INCLUDE_DIRS}
+        ${SDL2_MIXER_INCLUDE_DIRS}
+    )
+
+    # pkg-config may also provide linker flags (like -L paths)
+    link_directories(
+        ${SDL2_LIBRARY_DIRS}
+        ${SDL2_TTF_LIBRARY_DIRS}
+        ${SDL2_MIXER_LIBRARY_DIRS}
+    )
+    message(STATUS "Found SDL2 via pkg-config")
+endif()
 
 # ---------------------------------------------------------------------------
 # Define our executable
@@ -56,21 +82,21 @@ add_executable(tetris
 # Include directories — where the compiler looks for header files (.h)
 # ---------------------------------------------------------------------------
 target_include_directories(tetris PRIVATE
-    ${SDL2_INCLUDE_DIRS}
+    ${SDL2_INC}
     src
 )
 
 # ---------------------------------------------------------------------------
 # Link libraries — connect our program to SDL2, SDL2_ttf, SDL2_mixer
 # ---------------------------------------------------------------------------
-# "Linking" means: make the compiled SDL2 code available to our program
-# so we can call functions like SDL_CreateWindow(), TTF_RenderText(), etc.
 target_link_libraries(tetris PRIVATE
-    SDL2::SDL2
-    SDL2::SDL2main
-    SDL2_ttf::SDL2_ttf
-    SDL2_mixer::SDL2_mixer
+    ${SDL2_LIBS}
 )
+
+# Suppress math library linking on Linux (needed for sin/cos in render.c)
+if(UNIX)
+    target_link_libraries(tetris PRIVATE m)
+endif()
 
 # ---------------------------------------------------------------------------
 # Copy assets folder next to the executable after building
