@@ -217,8 +217,7 @@ void input_handle(Game *game)
         if (key == SDLK_ESCAPE) {
             /* Go back to menu instead of quitting */
             if (game->state == STATE_GAME_OVER) {
-                leaderboard_add(game, game->score);
-                leaderboard_save(game);
+                /* Score already saved when game over triggered */
             }
             game->state = STATE_MENU;
             game->menu_fading = false;

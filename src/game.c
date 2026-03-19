@@ -200,6 +200,7 @@ bool game_init(Game *game)
  * =========================================================================== */
 void game_reset(Game *game)
 {
+    leaderboard_load(game);
     board_init(&game->board);
     piece_bag_init(game);
     game->current   = piece_bag_next(game);
